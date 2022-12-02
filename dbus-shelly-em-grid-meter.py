@@ -35,16 +35,17 @@ class DbusShellyEmService:
     # Create the mandatory objects
     self._dbusservice.add_path('/DeviceInstance', deviceinstance)
     #self._dbusservice.add_path('/ProductId', 16) # value used in ac_sensor_bridge.cpp of dbus-cgwacs
-    #self._dbusservice.add_path('/ProductId', 0xFFFF) # id assigned by Victron Support from SDM630v2.py
-    self._dbusservice.add_path('/ProductId', 45069) # found on https://www.sascha-curth.de/projekte/005_Color_Control_GX.html#experiment - should be an ET340 Engerie Meter
-    self._dbusservice.add_path('/DeviceType', 345) # found on https://www.sascha-curth.de/projekte/005_Color_Control_GX.html#experiment - should be an ET340 Engerie Meter
+    self._dbusservice.add_path('/ProductId', 0xFFFF) # id assigned by Victron Support from SDM630v2.py
+    #self._dbusservice.add_path('/ProductId', 45069) # found on https://www.sascha-curth.de/projekte/005_Color_Control_GX.html#experiment - should be an ET340 Engerie Meter
+    #self._dbusservice.add_path('/DeviceType', 345) # found on https://www.sascha-curth.de/projekte/005_Color_Control_GX.html#experiment - should be an ET340 Engerie Meter
     self._dbusservice.add_path('/ProductName', productname)
     self._dbusservice.add_path('/CustomName', productname)    
     self._dbusservice.add_path('/Latency', None)    
     self._dbusservice.add_path('/FirmwareVersion', 0.1)
     self._dbusservice.add_path('/HardwareVersion', 0)
     self._dbusservice.add_path('/Connected', 1)
-    self._dbusservice.add_path('/Role', 'grid')
+    self._dbusservice.add_path('/NumberOfPhases', 1)
+    #self._dbusservice.add_path('/Role', 'grid')
     self._dbusservice.add_path('/Position', 0) # normaly only needed for pvinverter
     self._dbusservice.add_path('/Serial', self._getShellySerial())
     self._dbusservice.add_path('/UpdateIndex', 0)

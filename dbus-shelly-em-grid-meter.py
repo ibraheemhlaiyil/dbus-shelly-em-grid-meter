@@ -212,7 +212,7 @@ def main():
       _v = lambda p, v: (str(round(v, 1)) + ' V')   
      
       #start our main-service
-      pvac_output = DbusShelly3emService(
+      pvac_output = DbusShellyEmService(
         servicename='com.victronenergy.grid',
         deviceinstance=40,
         paths={

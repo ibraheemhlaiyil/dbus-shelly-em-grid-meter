@@ -20,8 +20,8 @@ sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/d
 from vedbus import VeDbusService
 
 
-class DbusShelly3emService:
-  def __init__(self, servicename, deviceinstance, paths, productname='Shelly 3EM', connection='Shelly 3EM HTTP JSON service'):
+class DbusShellyEmService:
+  def __init__(self, servicename, deviceinstance, paths, productname='Shelly EM', connection='Shelly EM HTTP JSON service'):
     self._dbusservice = VeDbusService("{}.http_{:02d}".format(servicename, deviceinstance))
     self._paths = paths
  
@@ -108,7 +108,7 @@ class DbusShelly3emService:
     
     # check for response
     if not meter_r:
-        raise ConnectionError("No response from Shelly 3EM - %s" % (URL))
+        raise ConnectionError("No response from Shelly EM - %s" % (URL))
     
     meter_data = meter_r.json()     
     
@@ -129,39 +129,23 @@ class DbusShelly3emService:
  
   def _update(self):   
     try:
-       #get data from Shelly 3em
+       #get data from Shelly EM
        meter_data = self._getShellyData()
        
        #send data to DBus
-       self._dbusservice['/Ac/Power'] = meter_data['total_power'] # positive: consumption, negative: feed into grid
-       self._dbusservice['/Ac/L1/Voltage'] = meter_data['emeters'][0]['voltage']
-       self._dbusservice['/Ac/L2/Voltage'] = meter_data['emeters'][1]['voltage']
-       self._dbusservice['/Ac/L3/Voltage'] = meter_data['emeters'][2]['voltage']
-       self._dbusservice['/Ac/L1/Current'] = meter_data['emeters'][0]['current']
-       self._dbusservice['/Ac/L2/Current'] = meter_data['emeters'][1]['current']
-       self._dbusservice['/Ac/L3/Current'] = meter_data['emeters'][2]['current']
-       self._dbusservice['/Ac/L1/Power'] = meter_data['emeters'][0]['power']
-       self._dbusservice['/Ac/L2/Power'] = meter_data['emeters'][1]['power']
-       self._dbusservice['/Ac/L3/Power'] = meter_data['emeters'][2]['power']
+       
+       voltage = meter_data['emeters'][0]['voltage']
+       power = meter_data['emeters'][0]['power']
+       
+       self._dbusservice['/Ac/L1/Voltage'] = voltage
+       self._dbusservice['/Ac/L1/Current'] = power / voltage
+       self._dbusservice['/Ac/L1/Power'] = power
        self._dbusservice['/Ac/L1/Energy/Forward'] = (meter_data['emeters'][0]['total']/1000)
-       self._dbusservice['/Ac/L2/Energy/Forward'] = (meter_data['emeters'][1]['total']/1000)
-       self._dbusservice['/Ac/L3/Energy/Forward'] = (meter_data['emeters'][2]['total']/1000)
-       self._dbusservice['/Ac/L1/Energy/Reverse'] = (meter_data['emeters'][0]['total_returned']/1000) 
-       self._dbusservice['/Ac/L2/Energy/Reverse'] = (meter_data['emeters'][1]['total_returned']/1000) 
-       self._dbusservice['/Ac/L3/Energy/Reverse'] = (meter_data['emeters'][2]['total_returned']/1000) 
+       self._dbusservice['/Ac/L1/Energy/Reverse'] = (meter_data['emeters'][0]['total_returned']/1000)
        
-       # Old version
-       #self._dbusservice['/Ac/Energy/Forward'] = self._dbusservice['/Ac/L1/Energy/Forward'] + self._dbusservice['/Ac/L2/Energy/Forward'] + self._dbusservice['/Ac/L3/Energy/Forward']
-       #self._dbusservice['/Ac/Energy/Reverse'] = self._dbusservice['/Ac/L1/Energy/Reverse'] + self._dbusservice['/Ac/L2/Energy/Reverse'] + self._dbusservice['/Ac/L3/Energy/Reverse'] 
-       
-       # New Version - from xris99
-       #Calc = 60min * 60 sec / 0.500 (refresh interval of 500ms) * 1000
-       if (self._dbusservice['/Ac/Power'] > 0):
-            self._dbusservice['/Ac/Energy/Forward'] = self._dbusservice['/Ac/Energy/Forward'] + (self._dbusservice['/Ac/Power']/(60*60/0.5*1000))            
-       if (self._dbusservice['/Ac/Power'] < 0):
-            self._dbusservice['/Ac/Energy/Reverse'] = self._dbusservice['/Ac/Energy/Reverse'] + (self._dbusservice['/Ac/Power']*-1/(60*60/0.5*1000))
+       self._dbusservice['/Ac/Energy/Forward'] = self._dbusservice['/Ac/L1/Energy/Forward']
+       self._dbusservice['/Ac/Energy/Reverse'] = self._dbusservice['/Ac/L1/Energy/Reverse'] 
 
-       
        #logging
        logging.debug("House Consumption (/Ac/Power): %s" % (self._dbusservice['/Ac/Power']))
        logging.debug("House Forward (/Ac/Energy/Forward): %s" % (self._dbusservice['/Ac/Energy/Forward']))
@@ -176,8 +160,6 @@ class DbusShelly3emService:
     except (ValueError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, ConnectionError):
        logging.critical('Error getting data from Shelly - check network or Shelly status. Setting power values to 0')
        self._dbusservice['/Ac/L1/Power'] = 0                                       
-       self._dbusservice['/Ac/L2/Power'] = 0                                       
-       self._dbusservice['/Ac/L3/Power'] = 0
        self._dbusservice['/Ac/Power'] = 0
        self._dbusservice['/UpdateIndex'] = (self._dbusservice['/UpdateIndex'] + 1 ) % 256        
     except Exception as e:
@@ -242,20 +224,10 @@ def main():
           '/Ac/Voltage': {'initial': 0, 'textformat': _v},
           
           '/Ac/L1/Voltage': {'initial': 0, 'textformat': _v},
-          '/Ac/L2/Voltage': {'initial': 0, 'textformat': _v},
-          '/Ac/L3/Voltage': {'initial': 0, 'textformat': _v},
           '/Ac/L1/Current': {'initial': 0, 'textformat': _a},
-          '/Ac/L2/Current': {'initial': 0, 'textformat': _a},
-          '/Ac/L3/Current': {'initial': 0, 'textformat': _a},
           '/Ac/L1/Power': {'initial': 0, 'textformat': _w},
-          '/Ac/L2/Power': {'initial': 0, 'textformat': _w},
-          '/Ac/L3/Power': {'initial': 0, 'textformat': _w},
           '/Ac/L1/Energy/Forward': {'initial': 0, 'textformat': _kwh},
-          '/Ac/L2/Energy/Forward': {'initial': 0, 'textformat': _kwh},
-          '/Ac/L3/Energy/Forward': {'initial': 0, 'textformat': _kwh},
           '/Ac/L1/Energy/Reverse': {'initial': 0, 'textformat': _kwh},
-          '/Ac/L2/Energy/Reverse': {'initial': 0, 'textformat': _kwh},
-          '/Ac/L3/Energy/Reverse': {'initial': 0, 'textformat': _kwh},
         })
      
       logging.info('Connected to dbus, and switching over to gobject.MainLoop() (= event based)')

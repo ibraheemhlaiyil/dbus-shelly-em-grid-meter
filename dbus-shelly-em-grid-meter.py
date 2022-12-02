@@ -136,13 +136,17 @@ class DbusShellyEmService:
        
        voltage = meter_data['emeters'][0]['voltage']
        power = meter_data['emeters'][0]['power']
+       current = power / voltage
        
        self._dbusservice['/Ac/L1/Voltage'] = voltage
-       self._dbusservice['/Ac/L1/Current'] = power / voltage
+       self._dbusservice['/Ac/L1/Current'] = current
        self._dbusservice['/Ac/L1/Power'] = power
        self._dbusservice['/Ac/L1/Energy/Forward'] = (meter_data['emeters'][0]['total']/1000)
        self._dbusservice['/Ac/L1/Energy/Reverse'] = (meter_data['emeters'][0]['total_returned']/1000)
        
+       self._dbusservice['/Ac/Power'] = power
+       self._dbusservice['/Ac/Current'] = current
+       self._dbusservice['/Ac/Voltage'] = voltage
        self._dbusservice['/Ac/Energy/Forward'] = self._dbusservice['/Ac/L1/Energy/Forward']
        self._dbusservice['/Ac/Energy/Reverse'] = self._dbusservice['/Ac/L1/Energy/Reverse'] 
 
@@ -161,6 +165,7 @@ class DbusShellyEmService:
        logging.critical('Error getting data from Shelly - check network or Shelly status. Setting power values to 0')
        self._dbusservice['/Ac/L1/Power'] = 0                                       
        self._dbusservice['/Ac/Power'] = 0
+       self._dbusservice['/Ac/Current'] = 0
        self._dbusservice['/UpdateIndex'] = (self._dbusservice['/UpdateIndex'] + 1 ) % 256        
     except Exception as e:
        logging.critical('Error at %s', '_update', exc_info=e)

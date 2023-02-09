@@ -21,11 +21,13 @@ from vedbus import VeDbusService
 
 
 class DbusShellyEmService:
-  def __init__(self, servicename, deviceinstance, paths, productname='Shelly EM', connection='Shelly EM HTTP JSON service'):
-    self._dbusservice = VeDbusService("{}.http_{:02d}".format(servicename, deviceinstance))
+  def __init__(self, deviceinstance, paths, productname='Shelly EM', connection='Shelly EM HTTP JSON Service'):
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    self._dbusservice = VeDbusService("com.victronenergy.grid.cgwacs_http_di30_mb1")
     self._paths = paths
  
-    logging.debug("%s /DeviceInstance = %d" % (servicename, deviceinstance))
+    logging.debug("DeviceInstance = %d" % (deviceinstance))
  
     # Create the management objects, as specified in the ccgx dbus-api document
     self._dbusservice.add_path('/Mgmt/ProcessName', __file__)
@@ -35,20 +37,21 @@ class DbusShellyEmService:
     # Create the mandatory objects
     self._dbusservice.add_path('/DeviceInstance', deviceinstance)
     #self._dbusservice.add_path('/ProductId', 16) # value used in ac_sensor_bridge.cpp of dbus-cgwacs
-    self._dbusservice.add_path('/ProductId', 0xFFFF) # id assigned by Victron Support from SDM630v2.py
+    self._dbusservice.add_path('/ProductId', 45058) # id assigned by Victron Support from SDM630v2.py
     #self._dbusservice.add_path('/ProductId', 45069) # found on https://www.sascha-curth.de/projekte/005_Color_Control_GX.html#experiment - should be an ET340 Engerie Meter
-    #self._dbusservice.add_path('/DeviceType', 345) # found on https://www.sascha-curth.de/projekte/005_Color_Control_GX.html#experiment - should be an ET340 Engerie Meter
-    self._dbusservice.add_path('/ProductName', productname)
-    self._dbusservice.add_path('/CustomName', productname)    
-    self._dbusservice.add_path('/Latency', None)    
-    self._dbusservice.add_path('/FirmwareVersion', 0.1)
-    self._dbusservice.add_path('/HardwareVersion', 0)
+    self._dbusservice.add_path('/DeviceType', 71) # found on https://www.sascha-curth.de/projekte/005_Color_Control_GX.html#experiment - should be an ET340 Engerie Meter
+    self._dbusservice.add_path('/ProductName', 'Grid meter')
+    self._dbusservice.add_path('/CustomName', 'Grid meter')    
+    #self._dbusservice.add_path('/Latency', None)    
+    self._dbusservice.add_path('/FirmwareVersion', 2)
+    #self._dbusservice.add_path('/HardwareVersion', 0)
     self._dbusservice.add_path('/Connected', 1)
-    self._dbusservice.add_path('/NumberOfPhases', 1)
-    #self._dbusservice.add_path('/Role', 'grid')
+    #self._dbusservice.add_path('/NumberOfPhases', 1)
+    self._dbusservice.add_path('/Role', 'grid')
     self._dbusservice.add_path('/Position', 0) # normaly only needed for pvinverter
-    self._dbusservice.add_path('/Serial', self._getShellySerial())
+    self._dbusservice.add_path('/Serial', 'BP98305081235')
     self._dbusservice.add_path('/UpdateIndex', 0)
+    self._dbusservice.add_path('/ErrorCode', 0)
  
     # add path values to dbus
     for path, settings in self._paths.items():
@@ -59,7 +62,7 @@ class DbusShellyEmService:
     self._lastUpdate = 0
  
     # add _update function 'timer'
-    gobject.timeout_add(500, self._update) # pause 500ms before the next request
+    gobject.timeout_add(250, self._update) # pause 250ms before the next request
     
     # add _signOfLife 'timer' to get feedback in log every 5minutes
     gobject.timeout_add(self._getSignOfLifeInterval()*60*1000, self._signOfLife)
@@ -152,10 +155,10 @@ class DbusShellyEmService:
        self._dbusservice['/Ac/Energy/Reverse'] = self._dbusservice['/Ac/L1/Energy/Reverse'] 
 
        #logging
-       logging.debug("House Consumption (/Ac/Power): %s" % (self._dbusservice['/Ac/Power']))
-       logging.debug("House Forward (/Ac/Energy/Forward): %s" % (self._dbusservice['/Ac/Energy/Forward']))
-       logging.debug("House Reverse (/Ac/Energy/Revers): %s" % (self._dbusservice['/Ac/Energy/Reverse']))
-       logging.debug("---");
+       #logging.debug("House Consumption (/Ac/Power): %s" % (self._dbusservice['/Ac/Power']))
+       #logging.debug("House Forward (/Ac/Energy/Forward): %s" % (self._dbusservice['/Ac/Energy/Forward']))
+       #logging.debug("House Reverse (/Ac/Energy/Revers): %s" % (self._dbusservice['/Ac/Energy/Reverse']))
+       #logging.debug("---");
        
        # increment UpdateIndex - to show that new data is available an wrap
        self._dbusservice['/UpdateIndex'] = (self._dbusservice['/UpdateIndex'] + 1 ) % 256
@@ -219,8 +222,7 @@ def main():
      
       #start our main-service
       pvac_output = DbusShellyEmService(
-        servicename='com.victronenergy.grid',
-        deviceinstance=40,
+        deviceinstance=30,
         paths={
           '/Ac/Energy/Forward': {'initial': 0, 'textformat': _kwh}, # energy bought from the grid
           '/Ac/Energy/Reverse': {'initial': 0, 'textformat': _kwh}, # energy sold to the grid
